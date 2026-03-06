@@ -7,8 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 var openAICliente = new OpenAICliente();
 
-openAICliente.Initialize(builder.Configuration);
-//await openAICliente.ConnectMcpAsync(builder.Configuration);
+//openAICliente.Initialize(builder.Configuration);
+await openAICliente.ConnectMcpAsync(builder.Configuration);
 
 builder.Services.AddChatClient(openAICliente)
     .UseOpenTelemetry(configure: o => o.EnableSensitiveData = true);
