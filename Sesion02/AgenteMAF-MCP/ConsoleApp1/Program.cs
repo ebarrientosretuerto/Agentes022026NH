@@ -1,7 +1,20 @@
 ﻿using DemoAPP;
 using Microsoft.Extensions.Configuration;
-using OpenAI;
-using OpenAI.Chat;
+using Microsoft.Extensions.Hosting;
+using ModelContextProtocol.Server;
+using Microsoft.Extensions.DependencyInjection;
+
+//Si se pasa con --with-mcp se levanta el servidor MCP (stdio) en lugas del chat
+if (args.Contains("--with-mcp"))
+{
+    var builder = Host.CreateApplicationBuilder(args);
+    builder.Services
+        .AddMcpServer()
+        .WithStdioServerTransport()
+        .WithToolsFromAssembly();
+    await builder.Build().RunAsync();
+    return;
+}
 
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
@@ -13,17 +26,12 @@ IChatService chatService = new OpenAICliente();
 try
 {
     chatService.Initialize(configuration);
-
-    Console.WriteLine("Inicio Servidor MCP");
-
-    OpenAICliente _openAICliente = new OpenAICliente();
-    await _openAICliente.ConnectMcpAsync();
-    Console.WriteLine("Fin Servidor MCP");
-
     Console.WriteLine($"Hola soy tu agente Azure Open AI");
-}catch(Exception ex)
+
+}
+catch(Exception ex)
 {
-    Console.WriteLine($"Error fatal dureante la inicializacion: {ex.Message}");
+    Console.WriteLine($"Error fatal durante la inicializacion: {ex.Message}");
     return;
 }
 
