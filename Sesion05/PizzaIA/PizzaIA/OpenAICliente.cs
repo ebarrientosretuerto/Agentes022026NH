@@ -10,7 +10,7 @@ public class OpenAICliente : IChatClient
 {
     private IChatClient? _innerClient;
     private List<AITool> _tools = [];
-    private const string McpServerUrl = "";
+    private const string McpServerUrl = "https://ebarrientosr1979.app.n8n.cloud/mcp/d5ae25fc-482f-4ef9-80ee-983ac1378e6a";
 
     public float? Temperature { get; set; } = null;
     public float? TopP { get; set; } = null;    
@@ -38,9 +38,12 @@ public class OpenAICliente : IChatClient
             new HttpClientTransportOptions { Endpoint = new Uri(McpServerUrl) }
             );
 
+        
         var mcpClient = await McpClient.CreateAsync(transport, cancellationToken: CancellationToken.None);
         _tools = (await mcpClient.ListToolsAsync(cancellationToken: CancellationToken.None))
             .Cast<AITool>().ToList();
+
+        _tools.Add(AIFunctionFactory.Create(new PizzaDbTools().ObtenerEsquema));
     }
 
     private ChatOptions BuildOptions(ChatOptions? incoming = null)
@@ -75,5 +78,45 @@ public class OpenAICliente : IChatClient
         return await _innerClient.GetResponseAsync(messages, opts, cancellationToken);
     }
 
+    public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+        IEnumerable<ChatMessage> messages, 
+        ChatOptions? options = null, 
+        CancellationToken cancellationToken = default)
+    {
+        if (_innerClient == null) throw new InvalidOperationException("OpenIAClient NO Inicializado");
 
+        var opts = BuildOptions(options);
+
+        long totalInput = 0, totalOutput = 0, totalReasoning = 0, totalCached = 0;
+        
+        await foreach(var update in _innerClient.GetStreamingResponseAsync(messages, options, cancellationToken))
+        {
+            var usage = update.Contents.OfType<UsageContent>().FirstOrDefault();
+            if(usage?.Details != null)
+            {
+                totalInput += usage.Details.InputTokenCount ?? 0;
+                totalOutput += usage.Details.OutputTokenCount ?? 0;
+                totalReasoning += usage.Details.ReasoningTokenCount ?? 0;
+                totalCached += usage.Details.CachedInputTokenCount ?? 0;
+            }
+
+            await Task.Delay(StreamDelay, cancellationToken);
+            yield return update;
+        }
+
+        LogUsage(totalInput, totalOutput, totalReasoning, totalCached);
+    }
+
+    private static void LogUsage(long input, long output, long reasoning, long cached)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("=====Total de Tokens Usados ===========");
+        Console.WriteLine($"   Input Tokens     :   {input}");
+        Console.WriteLine($"   Output Tokens    :   {output}");
+        Console.WriteLine($"   Total Tokens     :   {input + output}");
+        Console.WriteLine($"   Reasoning Tokens :   {reasoning}");
+        Console.WriteLine($"   Cached input     :   {cached}");
+        Console.WriteLine("=======================================");
+        Console.ResetColor();
+    }
 }
