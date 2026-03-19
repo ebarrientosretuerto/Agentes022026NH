@@ -32,8 +32,9 @@ public class OpenAICliente : IChatClient
 
     public async Task ConnectMcpAsync(IConfiguration configuration)
     {
+        
         _innerClient = AzureClientFactory.Create(configuration);
-
+        
         var transport = new HttpClientTransport(
             new HttpClientTransportOptions { Endpoint = new Uri(McpServerUrl) }
             );
@@ -42,8 +43,14 @@ public class OpenAICliente : IChatClient
         var mcpClient = await McpClient.CreateAsync(transport, cancellationToken: CancellationToken.None);
         _tools = (await mcpClient.ListToolsAsync(cancellationToken: CancellationToken.None))
             .Cast<AITool>().ToList();
-
+        
+        //Agrega herramienta local del diccionario de datos de Mi Pizza
         _tools.Add(AIFunctionFactory.Create(new PizzaDbTools().ObtenerEsquema));
+
+        //Agrega herramienta de consulta a la base de datos PorstgreSQL
+        var queryTool = new PizzaDbQueryTool(configuration);
+        _tools.Add(AIFunctionFactory.Create(queryTool.EjecutarConsulta));
+        
     }
 
     private ChatOptions BuildOptions(ChatOptions? incoming = null)
