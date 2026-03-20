@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using ModelContextProtocol.Client;
 using System.Runtime.CompilerServices;
 using PizzaIA;
+using Microsoft.Agents.AI;
 
 namespace PizzaIA;
 
@@ -51,7 +52,15 @@ public class OpenAICliente : IChatClient
         //Agrega herramienta de consulta a la base de datos PorstgreSQL
         var queryTool = new PizzaDbQueryTool(configuration);
         _tools.Add(AIFunctionFactory.Create(queryTool.EjecutarConsulta));
-        
+
+        //Crear sub-agente formateador Markdown
+        AIAgent htmlAgent = AzureClientFactory.Create(configuration)
+            .AsAIAgent(
+                instructions: HtmlFormatterAgent.Instructions,
+                name: HtmlFormatterAgent.Name,
+                description: "Agente que formatea datos en Markdown limpio y legible. Enviale datosy devuelves Markdown"
+            );
+        _tools.Add(htmlAgent.AsAIFunction());
     }
 
     private ChatOptions BuildOptions(ChatOptions? incoming = null)
