@@ -190,9 +190,9 @@ public class OpenAICliente : IChatClient
     }
 
     public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
-        IEnumerable<ChatMessage> messages, 
-        ChatOptions? options = null, 
-        CancellationToken cancellationToken = default)
+    IEnumerable<ChatMessage> messages,
+    ChatOptions? options = null,
+    CancellationToken cancellationToken = default)
     {
         if (_innerClient == null) throw new InvalidOperationException("OpenIAClient NO Inicializado");
 
@@ -203,28 +203,37 @@ public class OpenAICliente : IChatClient
 
         long totalInput = 0, totalOutput = 0, totalReasoning = 0, totalCached = 0;
 
-        Console.Write("RateLimit");
-        //Aca tenemos el prompt de entrada y lo validamos con los Guardrails
-        //Guardrail: RateLimit
-        /*
+        // --- SECCIÓN CORREGIDA ---
         var (isAllowed, rateLimitMsg) = _rateLimiter.TryAcquire(sessionId);
         if (!isAllowed)
-            yield return new ChatResponseUpdate([new ChatMessage(ChatRole.Assistant, rateLimitMsg)]);
-            
+        {
+            yield return new ChatResponseUpdate { Role = ChatRole.Assistant, Contents = [new TextContent(rateLimitMsg)] };
+            yield break;
+        }
 
-        Console.Write("ValidateUserInput");
         var guardResult = ValidateUserInput(messages);
         if (guardResult != null)
-            yield return new ChatResponse([new ChatMessage(ChatRole.Assistant, guardResult)]);
-        */
-        Console.Write("Continua...");
-
-        await foreach(var update in _innerClient.GetStreamingResponseAsync(messagesWithHistory, 
-            options, 
-            cancellationToken))
         {
+            yield return new ChatResponseUpdate { Role = ChatRole.Assistant, Contents = [new TextContent(guardResult)] };
+            yield break;
+        }
+        // --- FIN SECCIÓN CORREGIDA ---
+
+        // Importante: Usar messagesWithHistory aquí
+        await foreach (var update in _innerClient.GetStreamingResponseAsync(messagesWithHistory, opts, cancellationToken))
+        {
+            // 1. Extraer y acumular el texto para la memoria
+            foreach (var content in update.Contents)
+            {
+                if (content is TextContent textContent)
+                {
+                    assistantTextBuilder.Append(textContent.Text);
+                }
+            }
+
+            // 2. Extraer métricas de uso
             var usage = update.Contents.OfType<UsageContent>().FirstOrDefault();
-            if(usage?.Details != null)
+            if (usage?.Details != null)
             {
                 totalInput += usage.Details.InputTokenCount ?? 0;
                 totalOutput += usage.Details.OutputTokenCount ?? 0;
@@ -236,15 +245,14 @@ public class OpenAICliente : IChatClient
             yield return update;
         }
 
-        //Guardar el turno en memoria: mensaje del usuario + respuesta del asistente
+        // Guardar el turno en memoria: mensaje del usuario + respuesta completa acumulada
         var userMessages = messages.Where(m => m.Role == ChatRole.User);
         foreach (var msg in userMessages)
             _memory.AddMessage(sessionId, msg);
 
-        var assistantText = assistantTextBuilder.ToString();
-        if (!string.IsNullOrEmpty(assistantText))
-            _memory.AddMessage(sessionId, new ChatMessage(ChatRole.Assistant, assistantText));
-
+        var assistantFullText = assistantTextBuilder.ToString();
+        if (!string.IsNullOrEmpty(assistantFullText))
+            _memory.AddMessage(sessionId, new ChatMessage(ChatRole.Assistant, assistantFullText));
 
         LogUsage(totalInput, totalOutput, totalReasoning, totalCached);
     }
