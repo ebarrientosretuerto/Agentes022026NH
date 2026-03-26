@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-﻿namespace PizzaIA.Guardrails
+﻿namespace PizzaIA.Guardrails;
 
 /// <summary>
 /// Guardrail SQL: validación robusta de consultas SQL antes de ejecutarlas.
@@ -124,17 +124,22 @@ public static partial class SqlGuardrail
         {
             if (!inString && (c == '\'' || c == '"'))
             {
+                Console.WriteLine($"carater3 {c}");
                 inString = true;
                 quoteChar = c;
             }
             else if (inString && c == quoteChar)
             {
+                Console.WriteLine($"carater2 {c}");
                 inString = false;
             }
+            /*
             else if (!inString && c == ';')
             {
+                Console.WriteLine($"carater {c}");
                 return true;
             }
+            */
         }
         return false;
     }

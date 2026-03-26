@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
 using Npgsql;
+using PizzaIA.Guardrails;
 
 namespace PizzaIA;
 
@@ -31,6 +32,16 @@ public class PizzaDbQueryTool
         "Solo se perminten SELECT. USa siempre el prefijo schema pizza en las tablas.")]
     public async  Task<string> EjecutarConsulta(string sql)
     {
+        var (isValid, errorMessage) = SqlGuardrail.Validate(sql);
+        if (!isValid)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"[Sqlguardrail] Consulta bloqueada: {errorMessage}");
+            Console.WriteLine($"[Sqlguardrail] SQL: {sql[..Math.Min(200, sql.Length)]}");
+            Console.ResetColor();
+            return $"Error: {errorMessage}";
+        }
+
         var trimmed = sql.TrimStart().ToUpperInvariant();
 
         if (!trimmed.StartsWith("SELECT"))

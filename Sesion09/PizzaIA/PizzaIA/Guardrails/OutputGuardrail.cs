@@ -1,4 +1,4 @@
-﻿namespace PizzaIA.Guardrails
+﻿namespace PizzaIA.Guardrails;
 
 /// <summary>
 /// Guardrail de salida: valida las respuestas del modelo antes de enviarlas al usuario.

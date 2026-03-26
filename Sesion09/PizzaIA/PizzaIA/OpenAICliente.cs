@@ -4,12 +4,16 @@ using ModelContextProtocol.Client;
 using System.Runtime.CompilerServices;
 using PizzaIA;
 using Microsoft.Agents.AI;
+using PizzaIA.Guardrails;
+using Microsoft.VisualBasic;
+
 
 namespace PizzaIA;
 
 public class OpenAICliente : IChatClient
 {
     private IChatClient? _innerClient;
+    private readonly RateLimit _rateLimiter = new(maxRequest:20, window:TimeSpan.FromMinutes(1));
     private List<AITool> _tools = [];
     private const string McpServerUrl = "https://ebarrientosr1979.app.n8n.cloud/mcp/d5ae25fc-482f-4ef9-80ee-983ac1378e6a";
     private readonly ChatMemoryStore _memory = new();
@@ -93,12 +97,63 @@ public class OpenAICliente : IChatClient
         if (_innerClient == null) throw new InvalidOperationException("OpenAICliente no inicializado");
         var opts = BuildOptions(options);
         var sessionId = ExtractSessionID(opts);
+
+        Console.Write("RateLimit");
+        //Aca tenemos el prompt de entrada y lo validamos con los Guardrails
+        //Guardrail: RateLimit
+        var (isAllowed, rateLimitMsg) = _rateLimiter.TryAcquire(sessionId);
+        if (!isAllowed)
+            return new ChatResponse([new ChatMessage(ChatRole.Assistant, rateLimitMsg)]);
+
+        Console.Write("ValidateUserInput");
+        var guardResult = ValidateUserInput(messages);
+        if (guardResult != null)
+            return new ChatResponse([new ChatMessage(ChatRole.Assistant, guardResult)]);
+        Console.Write("Continua...");
+
         var messageWithHistory = BuildMessageWithHistory(sessionId, messages);
 
         var response = await _innerClient.GetResponseAsync(messages, opts, cancellationToken);
 
+        //Guardrail: Sanitizar output del modelo
+        SanitizeResponseMessage(response.Messages);
+
         SaveTurnToMemory(sessionId, messages, response.Messages);
         return response;
+    }
+
+    private static void SanitizeResponseMessage(IList<ChatMessage> messages)
+    {
+        for (int i = 0; i<messages.Count; i++)
+        {
+            if (messages[i].Role == ChatRole.Assistant && messages[i].Text != null)
+            {
+                var sanitized = OutputGuardrail.Sanitize(messages[i].Text);
+                if(sanitized != messages[i].Text)
+                {
+                    messages[i] = new ChatMessage(ChatRole.Assistant, sanitized);
+                }
+            }
+        }
+    }
+
+    private string? ValidateUserInput(IEnumerable<ChatMessage> messages)
+    {
+        Console.Write("Ejecutando el metodo Guardrail ValidateUserInput");
+        foreach(var msg in messages.Where(m => m.Role == ChatRole.User))
+        {
+            var text = msg.Text;
+            var (isValid, errorMessage) = InputGuardrail.Validate(text);
+            if (!isValid)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[InputGuardrail] Mensaje bloqueado: {{errorMessage}}");
+                Console.WriteLine($"[InputGuardrail] Input: {text?[..Math.Min(100, text?.Length ?? 0)]}");
+                Console.ResetColor();
+                return errorMessage;
+            }
+        }
+        return null;
     }
 
     private List<ChatMessage> BuildMessageWithHistory(string sessionId, 
@@ -147,7 +202,23 @@ public class OpenAICliente : IChatClient
         var assistantTextBuilder = new System.Text.StringBuilder();
 
         long totalInput = 0, totalOutput = 0, totalReasoning = 0, totalCached = 0;
-        
+
+        Console.Write("RateLimit");
+        //Aca tenemos el prompt de entrada y lo validamos con los Guardrails
+        //Guardrail: RateLimit
+        /*
+        var (isAllowed, rateLimitMsg) = _rateLimiter.TryAcquire(sessionId);
+        if (!isAllowed)
+            yield return new ChatResponseUpdate([new ChatMessage(ChatRole.Assistant, rateLimitMsg)]);
+            
+
+        Console.Write("ValidateUserInput");
+        var guardResult = ValidateUserInput(messages);
+        if (guardResult != null)
+            yield return new ChatResponse([new ChatMessage(ChatRole.Assistant, guardResult)]);
+        */
+        Console.Write("Continua...");
+
         await foreach(var update in _innerClient.GetStreamingResponseAsync(messagesWithHistory, 
             options, 
             cancellationToken))
