@@ -72,4 +72,26 @@ app.MapOpenAIConversations();
 app.MapDevUI();
 app.MapGet("/", () => "Foundry DevUI esta en ejecucín /devui para ver el dashboard");
 
+app.MapPost("/api/rag/ingestar", async (HttpRequest request) =>
+{
+    var ruta = request.Query["ruta"].ToString();
+    if (string.IsNullOrEmpty(ruta))
+        return Results.BadRequest("Parámetro 'ruta' requerido. Puede ser un archivo PDF o una carpeta.");
+
+    if (Directory.Exists(ruta))
+    {
+        var resultados = await ingestionService.ProcesarCarpetaAsync(ruta);
+        return Results.Ok(resultados);
+    }
+
+    if (File.Exists(ruta) && ruta.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+    {
+        var resultado = await ingestionService.ProcesarPdfAsync(ruta);
+        return Results.Ok(resultado);
+    }
+
+    return Results.BadRequest("La ruta no es un archivo PDF válido ni una carpeta existente.");
+});
+
+
 app.Run();
