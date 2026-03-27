@@ -1,11 +1,12 @@
-﻿using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
-using ModelContextProtocol.Client;
-using System.Runtime.CompilerServices;
-using PizzaIA;
+﻿using Azure;
 using Microsoft.Agents.AI;
-using PizzaIA.Guardrails;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.VisualBasic;
+using ModelContextProtocol.Client;
+using PizzaIA;
+using PizzaIA.Guardrails;
+using System.Runtime.CompilerServices;
 
 
 namespace PizzaIA;
@@ -194,7 +195,16 @@ public class OpenAICliente : IChatClient
     ChatOptions? options = null,
     CancellationToken cancellationToken = default)
     {
-        if (_innerClient == null) throw new InvalidOperationException("OpenIAClient NO Inicializado");
+        var response = await GetResponseAsync(messages, options, cancellationToken);
+        foreach(var msg in response.Messages)
+        {
+            yield return new ChatResponseUpdate
+            {
+                Role = msg.Role,
+                Contents = msg.Contents
+            };
+        }
+        /*if (_innerClient == null) throw new InvalidOperationException("OpenIAClient NO Inicializado");
 
         var opts = BuildOptions(options);
         var sessionId = ExtractSessionID(opts);
@@ -241,6 +251,9 @@ public class OpenAICliente : IChatClient
                 totalCached += usage.Details.CachedInputTokenCount ?? 0;
             }
 
+            //Guardrail: Sanitizar output del modelo
+            //SanitizeResponseMessage(update);
+
             await Task.Delay(StreamDelay, cancellationToken);
             yield return update;
         }
@@ -255,6 +268,7 @@ public class OpenAICliente : IChatClient
             _memory.AddMessage(sessionId, new ChatMessage(ChatRole.Assistant, assistantFullText));
 
         LogUsage(totalInput, totalOutput, totalReasoning, totalCached);
+        */
     }
 
     private static string ExtractSessionID(ChatOptions opts)

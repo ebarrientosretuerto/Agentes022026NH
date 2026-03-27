@@ -28,7 +28,7 @@ public static class OutputGuardrail
         "mi prompt es",
         "mi system prompt",
         "fui instruido para",
-        "mis reglas son:",
+        "mis reglas",
         "my instructions are",
         "my system prompt",
     ];
