@@ -15,6 +15,13 @@ var openAICliente = new OpenAICliente
 
 await openAICliente.ConnectMcpAsync(builder.Configuration);
 
+//Registrar los servicios RAG
+var embeddingService = new EmbeddingService(builder.Configuration);
+var vectorStore = new VectoStore(builder.Configuration);
+var ragTool = new RagSearchTool(embeddingService, vectorStore);
+var ingestionService = new PdfIngestionService(embeddingService, vectorStore)
+
+
 builder.Services.AddChatClient(openAICliente)
     .UseOpenTelemetry(configure: o => o.EnableSensitiveData = true);
 
