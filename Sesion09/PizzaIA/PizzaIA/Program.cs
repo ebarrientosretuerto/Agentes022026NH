@@ -2,6 +2,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Agents.AI.DevUI;
 using Microsoft.Agents.AI.Hosting;
 using PizzaIA;
+using PizzaIA.RAG;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,10 +18,11 @@ await openAICliente.ConnectMcpAsync(builder.Configuration);
 
 //Registrar los servicios RAG
 var embeddingService = new EmbeddingService(builder.Configuration);
-var vectorStore = new VectoStore(builder.Configuration);
+var vectorStore = new VectorStore(builder.Configuration);
 var ragTool = new RagSearchTool(embeddingService, vectorStore);
-var ingestionService = new PdfIngestionService(embeddingService, vectorStore)
+var ingestionService = new PdfIngestionService(embeddingService, vectorStore);
 
+openAICliente.AgregarTool(AIFunctionFactory.Create(ragTool.BuscarEnDocumentos));
 
 builder.Services.AddChatClient(openAICliente)
     .UseOpenTelemetry(configure: o => o.EnableSensitiveData = true);

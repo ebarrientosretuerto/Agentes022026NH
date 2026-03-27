@@ -32,6 +32,8 @@ public class OpenAICliente : IChatClient
     public IList<string>? StopSequences { get; set; } = null;
     public int StreamDelay { get; set; } = 30;
 
+    public void AgregarTool(AITool tool) => _tools.Add(tool);
+
     public ChatClientMetadata Metadata => new("OpenAICliente");
     public void Dispose() { }
     public object? GetService(Type serviceType, object? serviceKey = null) => null;
