@@ -54,20 +54,20 @@ public class OpenAICliente : IChatClient
         //    .Cast<AITool>().ToList();
         
         //Agrega herramienta local del diccionario de datos de Mi Pizza
-        _tools.Add(AIFunctionFactory.Create(new PizzaDbTools().ObtenerEsquema));
+        //_tools.Add(AIFunctionFactory.Create(new PizzaDbTools().ObtenerEsquema));
 
         //Agrega herramienta de consulta a la base de datos PorstgreSQL
-        var queryTool = new PizzaDbQueryTool(configuration);
-        _tools.Add(AIFunctionFactory.Create(queryTool.EjecutarConsulta));
+        //var queryTool = new PizzaDbQueryTool(configuration);
+        //_tools.Add(AIFunctionFactory.Create(queryTool.EjecutarConsulta));
 
         //Crear sub-agente formateador Markdown
-        AIAgent htmlAgent = AzureClientFactory.Create(configuration)
-            .AsAIAgent(
-                instructions: HtmlFormatterAgent.Instructions,
-                name: HtmlFormatterAgent.Name,
-                description: "Agente que formatea datos en Markdown limpio y legible. Enviale datosy devuelves Markdown"
-            );
-        _tools.Add(htmlAgent.AsAIFunction());
+        //AIAgent htmlAgent = AzureClientFactory.Create(configuration)
+        //    .AsAIAgent(
+        //        instructions: HtmlFormatterAgent.Instructions,
+        //        name: HtmlFormatterAgent.Name,
+        //        description: "Agente que formatea datos en Markdown limpio y legible. Enviale datosy devuelves Markdown"
+        //    );
+        //_tools.Add(htmlAgent.AsAIFunction());
     }
 
     private ChatOptions BuildOptions(ChatOptions? incoming = null)
