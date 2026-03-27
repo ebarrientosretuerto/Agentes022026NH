@@ -1,4 +1,4 @@
-namespace DemoAPP.PDFVector;
+namespace PizzaIA.RAG;
 
 /// <summary>
 /// Servicio de ingesta: orquesta el pipeline completo de PDF → chunks → embeddings → pgvector.

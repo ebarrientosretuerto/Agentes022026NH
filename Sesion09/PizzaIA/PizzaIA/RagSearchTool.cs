@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 
-namespace DemoAPP.PDFVector;
+namespace PizzaIA.RAG;
 
 /// <summary>
 /// Herramienta RAG para el agente: busca información relevante en los documentos PDF indexados.

@@ -2,7 +2,7 @@ using Npgsql;
 using Pgvector;
 using Pgvector.Npgsql;
 
-namespace DemoAPP.PDFVector;
+namespace PizzaIA.RAG;
 
 /// <summary>
 /// Almacén de vectores en PostgreSQL con pgvector.
